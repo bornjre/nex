@@ -1,23 +1,10 @@
-use nexproto::greeter_client::GreeterClient;
+
 use nexproto::work_provider_client::{WorkProviderClient};
-use nexproto::{HelloRequest, WorkRequest, ResultType};
+use nexproto::{ WorkRequest, ResultType};
 
 pub mod nexproto {
     tonic::include_proto!("nexproto");
 }
-
-async fn greeter_hello() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = GreeterClient::connect("http://[::1]:50051").await?;
-
-    let request = tonic::Request::new(HelloRequest {
-        name: "Tonic".into(),
-    });
-
-    let response = client.say_hello(request).await?;
-    println!("RESPONSE={:?}", response);
-    Ok(())
-}
-
 
 async fn do_work() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = WorkProviderClient::connect("http://[::1]:50051").await?;
@@ -59,5 +46,4 @@ async fn do_work() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() {
     do_work().await;
-    //println!(" {:?}", greeter_hello().await);
 }
