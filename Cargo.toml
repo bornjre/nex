@@ -4,18 +4,23 @@ version = "0.1.0"
 authors = ["Manoj <bornjre@gmail.com>"]
 edition = "2018"
 
-[[bin]] # Bin to run the HelloWorld gRPC server
+[[bin]]
 name = "server"
 path = "src/server.rs"
 
-[[bin]] # Bin to run the HelloWorld gRPC client
+[[bin]]
 name = "client"
 path = "src/client.rs"
+
+[[bin]]
+name = "worker"
+path = "src/worker.rs"
 
 [dependencies]
 tonic = "0.2"
 prost = "0.6"
 tokio = { version = "0.2", features = ["macros"] }
+wasmer-runtime = "0.13.1"
 
 [build-dependencies]
 tonic-build = "0.2"
