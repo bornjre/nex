@@ -32,7 +32,8 @@ async fn run_client_loop() -> Result<(), Box<dyn std::error::Error>> {
                 None => break,
             };
 
-            c  = do_work(c).await?;
+            do_work(&mut c).await?;
+
             ctx = Some(c);
             thread::sleep(time::Duration::from_secs(5));
         }
@@ -46,7 +47,7 @@ async fn connect<'a>() -> Result<Clientconn, Box<dyn std::error::Error>> {
 }
 
 
-async fn do_work(mut ctx: ClientContext) -> Result<ClientContext, Box<dyn std::error::Error>> {
+async fn do_work<>( ctx:&mut ClientContext) -> Result<(), Box<dyn std::error::Error>> {
     let request = tonic::Request::new(WorkRequest {
         r#type: "any".to_string(),
     });
@@ -68,7 +69,7 @@ async fn do_work(mut ctx: ClientContext) -> Result<ClientContext, Box<dyn std::e
 
     println!("RESPONSE={:?}", response);
 
-    Ok(ctx)
+    Ok(())
 }
 
 #[tokio::main]
