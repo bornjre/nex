@@ -68,9 +68,12 @@ impl WorkProvider for WorkService {
                 let read = reader.read(&mut buffer).unwrap();
                 if read < buffer.len() as u64 {
                     status = 1;
+                }
+                println!("uploading stuff");
+                tx.send(Ok(BinaryResponse{ status: status, data: buffer[0..(read as usize)].to_vec(), description: "".to_string(),})).await.unwrap();
+                if status == 1 {
                     break;
                 }
-                tx.send(Ok(BinaryResponse{ status: status, data: buffer[1..(read as usize)].to_vec(), description: "".to_string(),})).await.unwrap();
             }
         });
 

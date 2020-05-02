@@ -1,12 +1,14 @@
 use nexproto::work_provider_client::WorkProviderClient;
 use nexproto::{ResultType, WorkRequest, BinaryRequest};
 use std::{thread, time};
+use std::fs::File;
 
 pub mod nexproto {
     tonic::include_proto!("nexproto");
 }
 
 type Clientconn = WorkProviderClient<tonic::transport::channel::Channel>;
+const WASM_CACHE_FOLDER: &'static str = "contrib/client_cache";
 
 struct ClientContext {
     conn: Clientconn,
@@ -34,15 +36,27 @@ async fn run_client_loop() -> Result<(), Box<dyn std::error::Error>> {
 
             
             let work = get_work(&mut c).await?;
-
-            get_binary(&mut c, work.1).await?;
-
+            file_get(&mut c, work).await?;
+            
 
             ctx = Some(c);
             thread::sleep(time::Duration::from_secs(5));
         }
     }
 }
+
+async fn file_get( ctx:&mut ClientContext, work: Work) -> Result<(), Box<dyn std::error::Error>> {
+    let file = format!("{}/{}_work.wasm",WASM_CACHE_FOLDER, work.1);
+    let f =  match File::open(file.clone()) {
+        Ok(f) => f,
+        Err(_) => {
+            get_binary(ctx, work.1).await?;
+            File::open(file)?
+        },
+    };
+    Ok(())
+}
+
 
 
 async fn connect<'a>() -> Result<Clientconn, Box<dyn std::error::Error>> {
@@ -66,6 +80,7 @@ async fn get_work( ctx:&mut ClientContext) -> Result<Work, Box<dyn std::error::E
 }
 
 async fn get_binary( ctx:&mut ClientContext, binary_id: i64) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Downloading binary");
 
     let binary_response = ctx.conn.get_binary(
         tonic::Request::new(BinaryRequest {
@@ -73,16 +88,17 @@ async fn get_binary( ctx:&mut ClientContext, binary_id: i64) -> Result<(), Box<d
         })
     ).await?;
     let mut stream = binary_response.into_inner();
+    let mut file = File::create(format!("{}/{}_work.wasm",WASM_CACHE_FOLDER, binary_id))?;
+    
 
 
-    while let Ok(message) = stream.message().await {
-        let message = match message {
-            Some(m) => m,
-            None => continue,
-        };
+    while let Some(message) = stream.message().await? {
+
+        std::io::Write::write_all(&mut file, &message.data.to_vec())?;
 
         println!("Messeage: {:?}, {:?}", message.status, message.description);
     }
+    println!("Finished downloading binary");
     Ok(())
 }
 
