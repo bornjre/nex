@@ -3,6 +3,7 @@ use nexproto::{ResultType, WorkRequest, BinaryRequest};
 use std::{thread, time};
 use std::fs::File;
 use wasmer_runtime::{error, imports, instantiate, Func};
+use std::io::Read;
 
 pub mod nexproto {
     tonic::include_proto!("nexproto");
@@ -39,9 +40,9 @@ async fn run_client_loop() -> Result<(), Box<dyn std::error::Error>> {
 
             
             let work = get_work(&mut c).await?;
-            let file = file_get(&mut c, work.1).await?;
+            let mut file = file_get(&mut c, work.1).await?;
 
-            let result = do_work(&mut c, file, work).await?;
+            let result = do_work(&mut c, &mut file, work).await?;
             upload_result(&mut c, result).await?;
 
             ctx = Some(c);
@@ -107,13 +108,15 @@ async fn get_binary( ctx:&mut ClientContext, binary_id: i64) -> Result<(), Box<d
     Ok(())
 }
 
-async fn do_work( ctx:&mut ClientContext, f: File, w: Work) -> Result<i64, Box<dyn std::error::Error>> {
+async fn do_work( ctx:&mut ClientContext, f:&mut File, w: Work) -> Result<i64, Box<dyn std::error::Error>> {
 
-    let wasm_bytes = include_bytes!("../contrib/wasm_files/add.wasm");
+    let mut buf = Vec::new();
+
+    f.read_to_end(&mut buf)?;
 
     let import_object = imports! {};
 
-    let instance = instantiate(wasm_bytes, &import_object)?;
+    let instance = instantiate(&buf, &import_object)?;
 
     let add_one: Func<u32, u32> = instance.func("add_one")?;
 
