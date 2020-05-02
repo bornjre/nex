@@ -2,6 +2,7 @@ use std::io::Read;
 use std::io;
 use std::fs::File;
 
+const WASM_CACHE_FOLDER: &'static str = "contrib/client_cache";
 
 pub struct BufferedFileReader {
     file: File,
@@ -31,3 +32,6 @@ impl BufferedFileReader {
     }
 }
 
+pub fn wasm_file(binary_id: i64) -> String {
+    format!("{}/{}_work.wasm",WASM_CACHE_FOLDER, binary_id)
+}

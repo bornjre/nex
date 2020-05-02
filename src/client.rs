@@ -2,13 +2,16 @@ use nexproto::work_provider_client::WorkProviderClient;
 use nexproto::{ResultType, WorkRequest, BinaryRequest};
 use std::{thread, time};
 use std::fs::File;
+use wasmer_runtime::{error, imports, instantiate, Func};
 
 pub mod nexproto {
     tonic::include_proto!("nexproto");
 }
 
+mod file_utilities;
+use file_utilities::wasm_file;
+
 type Clientconn = WorkProviderClient<tonic::transport::channel::Channel>;
-const WASM_CACHE_FOLDER: &'static str = "contrib/client_cache";
 
 struct ClientContext {
     conn: Clientconn,
@@ -36,8 +39,10 @@ async fn run_client_loop() -> Result<(), Box<dyn std::error::Error>> {
 
             
             let work = get_work(&mut c).await?;
-            file_get(&mut c, work).await?;
-            
+            let file = file_get(&mut c, work.1).await?;
+
+            let result = do_work(&mut c, file, work).await?;
+            upload_result(&mut c, result).await?;
 
             ctx = Some(c);
             thread::sleep(time::Duration::from_secs(5));
@@ -45,16 +50,16 @@ async fn run_client_loop() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn file_get( ctx:&mut ClientContext, work: Work) -> Result<(), Box<dyn std::error::Error>> {
-    let file = format!("{}/{}_work.wasm",WASM_CACHE_FOLDER, work.1);
+async fn file_get( ctx:&mut ClientContext, binary_id: i64) -> Result<File, Box<dyn std::error::Error>> {
+    let file = wasm_file(binary_id);
     let f =  match File::open(file.clone()) {
         Ok(f) => f,
         Err(_) => {
-            get_binary(ctx, work.1).await?;
+            get_binary(ctx, binary_id).await?;
             File::open(file)?
         },
     };
-    Ok(())
+    Ok(f)
 }
 
 
@@ -88,7 +93,7 @@ async fn get_binary( ctx:&mut ClientContext, binary_id: i64) -> Result<(), Box<d
         })
     ).await?;
     let mut stream = binary_response.into_inner();
-    let mut file = File::create(format!("{}/{}_work.wasm",WASM_CACHE_FOLDER, binary_id))?;
+    let mut file = File::create(wasm_file(binary_id))?;
     
 
 
@@ -102,13 +107,27 @@ async fn get_binary( ctx:&mut ClientContext, binary_id: i64) -> Result<(), Box<d
     Ok(())
 }
 
-async fn do_work( ctx:&mut ClientContext) -> Result<(), Box<dyn std::error::Error>> {
+async fn do_work( ctx:&mut ClientContext, f: File, w: Work) -> Result<i64, Box<dyn std::error::Error>> {
 
-    Ok(())
+    let wasm_bytes = include_bytes!("../contrib/wasm_files/add.wasm");
+
+    let import_object = imports! {};
+
+    let instance = instantiate(wasm_bytes, &import_object)?;
+
+    let add_one: Func<u32, u32> = instance.func("add_one")?;
+
+    let result = add_one.call(w.0 as u32)?;
+
+    // Log the new value
+    println!("Result: {}", result);
+
+
+
+    Ok(result as i64)
 }
 
-async fn upload_result( ctx:&mut ClientContext, input: i64) -> Result<(), Box<dyn std::error::Error>> {
-    let output = input * input;
+async fn upload_result( ctx:&mut ClientContext, output: i64) -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(ResultType {
         status: 0,
