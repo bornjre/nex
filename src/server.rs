@@ -7,8 +7,8 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 
-mod buffered_reader;
-use buffered_reader::BufferedFileReader;
+mod file_utilities;
+use file_utilities::BufferedFileReader;
 
 pub mod nexproto {
     tonic::include_proto!("nexproto");

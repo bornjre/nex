@@ -1,8 +1,6 @@
 use std::io::Read;
 use std::io;
-
 use std::fs::File;
-
 
 
 pub struct BufferedFileReader {
@@ -32,3 +30,4 @@ impl BufferedFileReader {
         Ok(read_len)
     }
 }
+
