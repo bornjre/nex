@@ -16,11 +16,17 @@ path = "src/client.rs"
 name = "worker"
 path = "src/worker.rs"
 
+[[bin]]
+name = "play"
+path = "src/playground.rs"
+
+
 [dependencies]
 tonic = "0.2"
 prost = "0.6"
 tokio = { version = "0.2", features = ["macros"] }
 wasmer-runtime = "0.13.1"
+lazy_static = "1.4.0"
 
 [build-dependencies]
 tonic-build = "0.2"
