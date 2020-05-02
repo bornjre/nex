@@ -12,9 +12,6 @@ path = "src/server.rs"
 name = "client"
 path = "src/client.rs"
 
-[[bin]]
-name = "worker"
-path = "src/worker.rs"
 
 [[bin]]
 name = "play"
